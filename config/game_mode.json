@@ -1,0 +1,35 @@
+﻿{
+  "_commentaire": "Ce que fait GameMode.ps1 en Mode Jeu. TOUT est restauré à l'identique par le Mode Normal (état d'origine écrit sur le disque AVANT le basculement). Rien n'est tué, rien n'est suspendu, aucun service n'est arrêté (il faudrait l'admin : règle 'affiché, jamais lancé'). Pour valider une entrée, recopie-la dans game_mode.local.json (ignoré par Git) avec \"actif\": true : la dernière occurrence d'un même id / nom l'emporte.",
+  "planAlimentation": {
+    "actif": true,
+    "guid": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
+    "titre": "Plan « Performances élevées » pendant le jeu",
+    "classement": "gain marginal",
+    "source": "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options",
+    "sourceVerifiee": true
+  },
+  "notifications": {
+    "_honnetete": "Windows 11 active DÉJÀ « Ne pas déranger » automatiquement quand un jeu tourne (Paramètres > Système > Notifications > Activer automatiquement). GameMode.ps1 le rappelle seulement (pas de valeur officielle documentée pour le lire ou le forcer).",
+    "source": "https://support.microsoft.com/en-us/windows/experience/notifications-and-do-not-disturb-in-windows",
+    "sourceVerifiee": true
+  },
+  "registre": [
+    {
+      "id": "GM-TOAST", "actif": false,
+      "titre": "Couper toutes les bannières de notification pendant le jeu",
+      "chemin": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications", "nom": "ToastEnabled", "type": "DWord", "valeur": 0,
+      "classement": "gain marginal", "sourceVerifiee": false,
+      "note": "Valeur écrite par l'interrupteur « Notifications » des Paramètres, mais non documentée officiellement : NON VÉRIFIÉ, opt-in."
+    }
+  ],
+  "processus": [
+    { "nom": "OneDrive", "actif": false, "priorite": "BelowNormal", "note": "synchronisation de fichiers" },
+    { "nom": "Dropbox", "actif": false, "priorite": "BelowNormal", "note": "synchronisation de fichiers" },
+    { "nom": "GoogleDriveFS", "actif": false, "priorite": "BelowNormal", "note": "synchronisation de fichiers" },
+    { "nom": "msedge", "actif": false, "priorite": "BelowNormal", "note": "navigateur laissé ouvert" },
+    { "nom": "chrome", "actif": false, "priorite": "BelowNormal", "note": "navigateur laissé ouvert" },
+    { "nom": "firefox", "actif": false, "priorite": "BelowNormal", "note": "navigateur laissé ouvert" }
+  ],
+  "_processusHonnetete": "Baisser la priorité d'un programme ne le met pas en pause : il continue, mais cède le processeur au jeu quand les deux en veulent. Sur un 8 cœurs peu chargé, l'effet est en général non mesurable : classé « gain marginal ». Source de la propriété utilisée : https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.priorityclass",
+  "_jamais": "Processus refusés quoi qu'il arrive : système, Windows, sécurité (Defender), anti-triche (Vanguard, EasyAntiCheat, BattlEye, FACEIT), machines virtuelles, coffres de mots de passe, et tout processus d'un autre compte (liste dans scripts\\Common.ps1)."
+}

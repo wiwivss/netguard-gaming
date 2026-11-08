@@ -1,0 +1,16 @@
+# --- Données perso : ne jamais publier ---
+# Mesures réseau, IP, MAC, ports, comptes, chemins : uniquement en local
+reports/
+baseline/
+logs/
+*.log
+*.csv
+*.reg
+# Surcharges locales (vrais serveurs de jeu, exclusions, tâches de fond du Mode Jeu)
+config/*.local.json
+
+# --- Divers ---
+Thumbs.db
+desktop.ini
+.vscode/
+.claude/

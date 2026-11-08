@@ -1,0 +1,332 @@
+﻿{
+  "_commentaire": "Catalogue des réglages. Chaque entrée cite une source officielle vérifiée par recherche web le 2026-11-08 (sourceVerifiee = true). Source introuvable ou non officielle : sourceVerifiee = false, parDefaut = false, opt-in explicite. 'methode' : powercfg = appliqué par Apply.ps1 sans admin ; admin = commande AFFICHÉE, jamais lancée ; pare-feu = commande affichée règle par règle, après ton accord, jamais une règle Windows, export JSON avant ; manuel = fiche à suivre toi-même ; aucune = rien à appliquer (constat ou interdit).",
+  "_classements": "gain réel mesuré (seulement après Verify.ps1 en A/B) | stabilité | gain marginal | placebo | sécurité (hors classement de performance : corrige un risque, ne promet aucun ms)",
+  "_risques": "vert = sans effet de bord connu, annulable ; orange = peut casser un usage précis (indiqué), annulable ; rouge = peut dégrader le PC ou la sécurité : jamais appliqué par défaut",
+  "_profils": "Prudent = sécurité et stabilité vertes ; Équilibré = + gains marginaux verts ; Avancé = + éléments orange en opt-in. Les éléments 'placebo' et 'interdit' ne sont dans AUCUN profil.",
+  "actions": [
+    {
+      "id": "NG-001", "titre": "Mettre à jour WinRAR (7.13 ou plus)", "domaine": "securite",
+      "classement": "sécurité", "risque": "vert", "admin": true, "methode": "manuel", "priorite": 1,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": true, "detection": "winrar",
+      "quoi": "Les versions antérieures à 7.13 extraient des fichiers hors du dossier choisi quand on ouvre une archive piégée (CVE-2025-8088, exploitée ; CVE-2023-38831 avant 6.23). WinRAR n'a pas de mise à jour automatique.",
+      "commande": "winget upgrade --id RARLab.WinRAR --source winget",
+      "annulation": "Aucune (réinstaller une ancienne version n'a pas d'intérêt).",
+      "source": "https://nvd.nist.gov/vuln/detail/cve-2025-8088", "sourceVerifiee": true,
+      "noteSource": "Éditeur : https://www.win-rar.com (notes de version 7.13). netguard n'installe rien : la commande est affichée."
+    },
+    {
+      "id": "NG-002", "titre": "Fichier hosts : retirer les redirections vers une IP externe", "domaine": "securite",
+      "classement": "sécurité", "risque": "orange", "admin": true, "methode": "manuel", "priorite": 2,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": true, "detection": "hosts",
+      "quoi": "Des lignes du fichier hosts envoient des noms vers un serveur externe au lieu de les bloquer. Correctif : sauvegarder le fichier, puis soit remettre le contenu par défaut (méthode Microsoft), soit remplacer l'IP externe par 0.0.0.0 si tu veux garder le blocage.",
+      "commande": "Copy-Item \"$env:windir\\System32\\drivers\\etc\\hosts\" \"$env:windir\\System32\\drivers\\etc\\hosts.old\"  # puis édition avec le Bloc-notes lancé en admin",
+      "annulation": "Remettre hosts.old à la place de hosts.",
+      "risqueDetail": "orange : si une application dépend de ces redirections (ex. un logiciel qui ne doit pas joindre son serveur), elle se remettra à le joindre.",
+      "source": "https://support.microsoft.com/en-us/windows/experience/how-to-reset-the-hosts-file-back-to-the-default", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-003", "titre": "Serveur OpenSSH (sshd) : arrêter s'il ne sert pas", "domaine": "securite",
+      "classement": "sécurité", "risque": "orange", "admin": true, "methode": "admin", "priorite": 3,
+      "profils": ["Équilibré", "Avancé"], "parDefaut": false, "detection": "sshd",
+      "quoi": "sshd accepte des connexions sur le port 22 et sa règle de pare-feu l'autorise sur le réseau Privé. Si tu ne te connectes pas à ce PC à distance, l'arrêter et désactiver SA règle (jamais la supprimer).",
+      "commande": "Stop-Service sshd; Set-Service -Name sshd -StartupType Disabled; Disable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP'",
+      "annulation": "Set-Service -Name sshd -StartupType Automatic; Start-Service sshd; Enable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP'",
+      "risqueDetail": "orange : coupe l'accès SSH entrant (WSL, VS Code Remote, scripts depuis un autre PC).",
+      "source": "https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse", "sourceVerifiee": true,
+      "noteSource": "La page Microsoft supprime la règle lors de la désinstallation ; netguard ne fait que la DÉSACTIVER (règle 6 du projet)."
+    },
+    {
+      "id": "NG-004", "titre": "Réactiver la protection contre les falsifications de Defender", "domaine": "securite",
+      "classement": "sécurité", "risque": "vert", "admin": true, "methode": "manuel", "priorite": 4,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": true, "detection": "tamper",
+      "quoi": "Empêche un programme (ou un malware) de couper l'antivirus en temps réel par le registre, PowerShell ou une stratégie. Se règle uniquement dans l'interface : Sécurité Windows > Protection contre les virus et menaces > Gérer les paramètres > Protection contre les falsifications.",
+      "commande": "start windowsdefender://threatsettings",
+      "annulation": "Même écran (déconseillé).",
+      "source": "https://learn.microsoft.com/en-us/defender-endpoint/prevent-changes-to-security-settings-with-tamper-protection", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-005", "titre": "Bufferbloat : priorisation (QoS / SQM) sur la box", "domaine": "reseau",
+      "classement": "gain marginal", "risque": "vert", "admin": false, "methode": "manuel", "priorite": 5,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": true, "detection": "bufferbloat",
+      "quoi": "Quand la ligne est saturée (surtout en envoi), le ping monte. La seule vraie correction est sur la box ou un routeur (file d'attente intelligente type SQM / fq_codel / cake, ou débit montant plafonné un peu sous le débit réel). Un réglage sur le PC ne peut PAS corriger ce que la box met en file d'attente.",
+      "commande": "",
+      "annulation": "Désactiver la QoS dans l'interface de la box / du routeur.",
+      "risqueDetail": "Sur Bbox : Bouygues présente la QoS dans son guide, mais d'après la presse spécialisée la Bbox n'offre pas d'écran de QoS par appareil. Vérifier sur https://mabbox.bytel.fr ; à défaut, routeur avec SQM derrière la box, ou limiter l'envoi dans les applis (Steam, OneDrive, Discord, sauvegardes) pendant le jeu.",
+      "source": "https://www.bouyguestelecom.fr/guide-pratique/internet/QOS", "sourceVerifiee": true,
+      "noteSource": "Le guide Bouygues décrit le principe, pas l'écran exact de la Bbox : procédure à confirmer sur ton interface."
+    },
+    {
+      "id": "NG-006", "titre": "Plan d'alimentation : revenir à un mode Windows", "domaine": "jeu",
+      "classement": "stabilité", "risque": "vert", "admin": false, "methode": "powercfg", "priorite": 6,
+      "profils": ["Prudent", "Équilibré"], "parDefaut": true, "detection": "powerplan_tiers",
+      "quoi": "Le plan actif a été créé par un logiciel tiers : ses réglages ne sont pas documentés. Revenir à « Utilisation normale » (Balanced), le plan recommandé par Microsoft, qui monte déjà en fréquence à la demande sur un PC fixe.",
+      "application": { "type": "powercfg", "guid": "381b4222-f694-41f0-9685-ff5bb260df2e" },
+      "commande": "powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e",
+      "annulation": "powercfg /setactive <GUID d'origine, enregistré dans le journal>",
+      "source": "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-007", "titre": "Plan « Performances élevées » sur secteur (PC fixe)", "domaine": "jeu",
+      "classement": "gain marginal", "risque": "vert", "admin": false, "methode": "powercfg", "priorite": 12,
+      "profils": ["Avancé"], "parDefaut": false, "detection": "powerplan_perf",
+      "quoi": "Garde le processeur à haute fréquence en permanence. Sur un Ryzen de bureau, l'écart avec « Utilisation normale » est en général dans le bruit de mesure ; consommation et chaleur au repos plus élevées. Plutôt via le Mode Jeu (option 6), qui l'active seulement pendant le jeu.",
+      "application": { "type": "powercfg", "guid": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c" },
+      "commande": "powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
+      "annulation": "powercfg /setactive <GUID d'origine, enregistré dans le journal>",
+      "source": "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-008", "titre": "Pare-feu : désactiver les règles entrantes larges non Windows", "domaine": "securite",
+      "classement": "sécurité", "risque": "orange", "admin": true, "methode": "pare-feu", "priorite": 7,
+      "profils": ["Équilibré", "Avancé"], "parDefaut": false, "detection": "fw_larges",
+      "quoi": "Règles hors Windows qui autorisent tous les ports depuis toute adresse (souvent créées par la fenêtre « Autoriser l'accès »). Chaque règle est proposée UNE PAR UNE ; export JSON avant ; désactivation seulement (jamais de suppression) ; les règles des groupes Windows sont refusées.",
+      "commande": "Disable-NetFirewallRule -Name '<Id de la règle>'",
+      "annulation": "Enable-NetFirewallRule -Name '<Id de la règle>'",
+      "risqueDetail": "orange : une fonction réseau entrante du programme (partage local, jeu en LAN, transfert) peut cesser de marcher. Le jeu en ligne classique n'a pas besoin de règle entrante.",
+      "source": "https://learn.microsoft.com/en-us/powershell/module/netsecurity/disable-netfirewallrule", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-009", "titre": "Pare-feu : désactiver les règles de programmes désinstallés", "domaine": "securite",
+      "classement": "sécurité", "risque": "vert", "admin": true, "methode": "pare-feu", "priorite": 9,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": false, "detection": "fw_absents",
+      "quoi": "Règles entrantes qui pointent vers un programme qui n'existe plus : inutiles, mais un programme réinstallé au même chemin en hériterait. Même procédure que NG-008 (une par une, export, jamais les règles Windows).",
+      "commande": "Disable-NetFirewallRule -Name '<Id de la règle>'",
+      "annulation": "Enable-NetFirewallRule -Name '<Id de la règle>'",
+      "source": "https://learn.microsoft.com/en-us/powershell/module/netsecurity/disable-netfirewallrule", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-010", "titre": "Désactiver LLMNR (si inutilisé)", "domaine": "securite",
+      "classement": "sécurité", "risque": "orange", "admin": true, "methode": "admin", "priorite": 10,
+      "profils": ["Avancé"], "parDefaut": false, "detection": "llmnr",
+      "quoi": "LLMNR répond aux noms locaux non trouvés dans le DNS ; il peut être abusé sur un réseau partagé (usurpation de nom). Inutile chez soi si tes appareils se trouvent par le DNS de la box ou mDNS.",
+      "commande": "New-Item 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient' -Force | Out-Null; Set-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient' -Name EnableMulticast -Type DWord -Value 0",
+      "annulation": "Remove-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient' -Name EnableMulticast",
+      "risqueDetail": "orange : un vieux NAS ou une imprimante joints uniquement par leur nom court peuvent ne plus être trouvés.",
+      "source": "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dnsclient", "sourceVerifiee": true,
+      "noteSource": "Stratégie Turn_Off_Multicast, valeur de registre EnableMulticast."
+    },
+    {
+      "id": "NG-011", "titre": "Désactiver NetBIOS sur TCP/IP (si inutilisé)", "domaine": "securite",
+      "classement": "sécurité", "risque": "orange", "admin": true, "methode": "admin", "priorite": 11,
+      "profils": ["Avancé"], "parDefaut": false, "detection": "netbios",
+      "quoi": "Ancien protocole de noms (ports 137-139). Même risque d'usurpation que LLMNR. Inutile sauf vieux NAS / partages SMB très anciens.",
+      "commande": "Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'IPEnabled=True' | Invoke-CimMethod -MethodName SetTcpipNetbios -Arguments @{TcpipNetbiosOptions = [uint32]2}",
+      "annulation": "… -Arguments @{TcpipNetbiosOptions = [uint32]0}   # 0 = valeur par défaut (selon le DHCP)",
+      "risqueDetail": "orange : voisinage réseau et vieux partages par nom NetBIOS.",
+      "source": "https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/settcpipnetbios-method-in-class-win32-networkadapterconfiguration", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-012", "titre": "Carte réseau : Ethernet à économie d'énergie (EEE) désactivé", "domaine": "reseau",
+      "classement": "gain marginal", "risque": "vert", "admin": true, "methode": "admin", "priorite": 13,
+      "profils": ["Équilibré", "Avancé"], "parDefaut": false, "detection": "nic_eee", "abTest": true,
+      "quoi": "EEE met le lien en veille entre deux paquets (norme IEEE 802.3az). Effet sur le ping : quelques dizaines de microsecondes au plus en théorie, à mesurer en A/B. Cause connue de micro-coupures avec certains switchs : utile surtout si tu as des déconnexions.",
+      "commande": "Set-NetAdapterAdvancedProperty -Name '<carte>' -RegistryKeyword '*EEE' -RegistryValue 0",
+      "annulation": "Set-NetAdapterAdvancedProperty -Name '<carte>' -RegistryKeyword '*EEE' -RegistryValue <valeur d'origine>",
+      "source": "https://learn.microsoft.com/en-us/windows-hardware/drivers/network/standardized-inf-keywords-for-power-management", "sourceVerifiee": true,
+      "noteSource": "Mot-clé standard *EEE (0 = désactivé). Cmdlet : https://learn.microsoft.com/en-us/powershell/module/netadapter/set-netadapteradvancedproperty"
+    },
+    {
+      "id": "NG-013", "titre": "Carte Realtek : Green Ethernet, Gigabit Lite, Power Saving Mode", "domaine": "reseau",
+      "classement": "gain marginal", "risque": "vert", "admin": true, "methode": "admin", "priorite": 20,
+      "profils": [], "parDefaut": false, "detection": "nic_realtek", "abTest": true,
+      "quoi": "Économies d'énergie propriétaires Realtek. Aucune documentation officielle publique trouvée : NON VÉRIFIÉ, opt-in seulement.",
+      "commande": "Set-NetAdapterAdvancedProperty -Name '<carte>' -RegistryKeyword 'EnableGreenEthernet' -RegistryValue 0  # idem GigaLite, PowerSavingMode",
+      "annulation": "Même commande avec la valeur d'origine (journal).",
+      "source": "", "sourceVerifiee": false
+    },
+    {
+      "id": "NG-014", "titre": "Carte réseau : interdire à Windows de l'éteindre (PnPCapabilities)", "domaine": "reseau",
+      "classement": "stabilité", "risque": "vert", "admin": true, "methode": "admin", "priorite": 21,
+      "profils": [], "parDefaut": false, "detection": "nic_pnp",
+      "quoi": "Case « Autoriser l'ordinateur à éteindre ce périphérique ». L'article Microsoft qui documentait PnPCapabilities (écrit pour Windows 7) redirige aujourd'hui vers une page générique : NON VÉRIFIÉ pour Windows 11, opt-in seulement. Sur un PC fixe allumé, Windows n'éteint pas une carte en cours d'utilisation.",
+      "commande": "Gestionnaire de périphériques > carte réseau > Gestion de l'alimentation > décocher la case (méthode graphique, sans registre)",
+      "annulation": "Recocher la case.",
+      "source": "", "sourceVerifiee": false
+    },
+    {
+      "id": "NG-015", "titre": "Optimisation de la distribution : limiter la bande passante", "domaine": "reseau",
+      "classement": "gain marginal", "risque": "vert", "admin": true, "methode": "manuel", "priorite": 14,
+      "profils": ["Équilibré", "Avancé"], "parDefaut": false, "detection": "delivery_opt",
+      "quoi": "Windows Update et le Store peuvent télécharger en arrière-plan pendant une partie. Limiter le débit d'arrière-plan (en % ou en Mo/s) et l'envoi vers d'autres PC. Paramètres > Windows Update > Options avancées > Optimisation de la distribution > Options avancées.",
+      "commande": "start ms-settings:delivery-optimization",
+      "annulation": "Décocher les limites dans le même écran.",
+      "source": "https://learn.microsoft.com/en-us/windows/deployment/do/waas-delivery-optimization-reference", "sourceVerifiee": true,
+      "noteSource": "Stratégies équivalentes : DOMaxBackgroundDownloadBandwidth, DODownloadMode."
+    },
+    {
+      "id": "NG-016", "titre": "Pilote de la carte réseau (Realtek)", "domaine": "reseau",
+      "classement": "stabilité", "risque": "vert", "admin": true, "methode": "manuel", "priorite": 15,
+      "profils": ["Équilibré", "Avancé"], "parDefaut": false, "detection": "nic_driver",
+      "quoi": "Pilote de plus de 2 ans. Le prendre sur le site du fabricant de la CARTE MÈRE (ou de Realtek), jamais via un « updater » tiers. netguard ne télécharge rien.",
+      "commande": "",
+      "annulation": "Gestionnaire de périphériques > Pilote > Restaurer le pilote.",
+      "source": "", "sourceVerifiee": false,
+      "noteSource": "Page de téléchargement à identifier selon ta carte mère (non vérifiée)."
+    },
+    {
+      "id": "NG-017", "titre": "Logiciel d'inventaire réseau (Lansweeper) : désinstaller s'il n'est pas voulu", "domaine": "securite",
+      "classement": "sécurité", "risque": "vert", "admin": true, "methode": "manuel", "priorite": 8,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": false, "detection": "scanner",
+      "quoi": "Un outil d'inventaire balaie le réseau local en permanence. Normal sur un PC d'entreprise ; sur un PC perso installé sans le savoir, à désinstaller par Paramètres > Applications.",
+      "commande": "start ms-settings:appsfeatures",
+      "annulation": "Réinstallation depuis l'éditeur.",
+      "source": "", "sourceVerifiee": false, "noteSource": "Simple désinstallation Windows : pas de réglage."
+    },
+    {
+      "id": "NG-018", "titre": "Mises à jour d'applications en attente (winget)", "domaine": "securite",
+      "classement": "sécurité", "risque": "vert", "admin": false, "methode": "manuel", "priorite": 16,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": false, "detection": "winget",
+      "quoi": "Liste seulement : netguard n'installe rien. Priorité aux logiciels qui ouvrent des fichiers ou des pages venant d'Internet (navigateurs, lecteurs, archiveurs, Discord, lanceurs).",
+      "commande": "winget upgrade --id <Id> --source winget",
+      "annulation": "Aucune.",
+      "source": "https://learn.microsoft.com/en-us/windows/package-manager/winget/upgrade", "sourceVerifiee": false,
+      "noteSource": "Page de la commande winget upgrade, non revérifiée dans cette session."
+    },
+    {
+      "id": "NG-019", "titre": "Planification GPU accélérée par le matériel (HAGS)", "domaine": "jeu",
+      "classement": "gain marginal", "risque": "vert", "admin": false, "methode": "manuel", "priorite": 17,
+      "profils": ["Avancé"], "parDefaut": false, "detection": "hags",
+      "quoi": "Confie l'ordonnancement GPU à la carte (WDDM 2.7+). Les tests indépendants montrent un écart faible. À juger en jeu (images par seconde / temps d'image), pas au ping. Paramètres > Système > Écran > Graphiques.",
+      "commande": "start ms-settings:display-advancedgraphics",
+      "annulation": "Même écran ; redémarrage requis.",
+      "source": "https://devblogs.microsoft.com/directx/hardware-accelerated-gpu-scheduling/", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-020", "titre": "Mode Jeu Windows", "domaine": "jeu",
+      "classement": "gain marginal", "risque": "vert", "admin": false, "methode": "manuel", "priorite": 18,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": true, "detection": "gamemode",
+      "quoi": "Pendant un jeu, Windows limite les tâches de fond et bloque les installations de pilotes et les notifications de redémarrage de Windows Update. Paramètres > Jeux > Mode Jeu.",
+      "commande": "start ms-settings:gaming-gamemode",
+      "annulation": "Même écran.",
+      "source": "https://support.microsoft.com/en-us/windows/using-game-mode-on-your-pc-5c94107e-a537-206e-e9e9-20600523bc43", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-021", "titre": "Capture de la Game Bar en arrière-plan", "domaine": "jeu",
+      "classement": "gain marginal", "risque": "vert", "admin": false, "methode": "manuel", "priorite": 19,
+      "profils": ["Équilibré", "Avancé"], "parDefaut": false, "detection": "gamedvr",
+      "quoi": "L'enregistrement permanent des dernières minutes consomme encodeur et disque. Paramètres > Jeux > Captures > « Enregistrer ce qui s'est passé ». Pas de page officielle trouvée chiffrant l'effet : NON VÉRIFIÉ.",
+      "commande": "start ms-settings:gaming-gamedvr",
+      "annulation": "Même écran.",
+      "source": "", "sourceVerifiee": false
+    },
+    {
+      "id": "NG-022", "titre": "Accélération de la souris (« Améliorer la précision du pointeur »)", "domaine": "jeu",
+      "classement": "gain marginal", "risque": "vert", "admin": false, "methode": "manuel", "priorite": 22,
+      "profils": [], "parDefaut": false, "detection": "souris",
+      "quoi": "Rend la visée dépendante de la vitesse du geste. Question de préférence. Panneau : main.cpl > Options du pointeur. Pas de page officielle trouvée : NON VÉRIFIÉ.",
+      "commande": "start main.cpl",
+      "annulation": "Recocher la case.",
+      "source": "", "sourceVerifiee": false
+    },
+    {
+      "id": "NG-023", "titre": "SMBv1 désactivé", "domaine": "securite",
+      "classement": "sécurité", "risque": "vert", "admin": true, "methode": "admin", "priorite": 23,
+      "profils": ["Prudent", "Équilibré", "Avancé"], "parDefaut": true, "detection": "smb1",
+      "quoi": "Protocole de partage obsolète (WannaCry). À désactiver seulement s'il est actif.",
+      "commande": "Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol",
+      "annulation": "Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol",
+      "source": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/troubleshoot/detect-enable-and-disable-smbv1-v2-v3", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-024", "titre": "DNS : passer au résolveur le plus rapide", "domaine": "reseau",
+      "classement": "gain marginal", "risque": "vert", "admin": true, "methode": "admin", "priorite": 24,
+      "profils": ["Équilibré", "Avancé"], "parDefaut": false, "detection": "dns",
+      "quoi": "Proposé seulement si un résolveur public bat le résolveur actuel d'au moins le seuil (5 ms de médiane). Le DNS ne change PAS le ping en jeu : il ne joue qu'au moment de résoudre un nom.",
+      "commande": "Set-DnsClientServerAddress -InterfaceAlias '<carte>' -ServerAddresses ('<ip1>','<ip2>')",
+      "annulation": "Set-DnsClientServerAddress -InterfaceAlias '<carte>' -ResetServerAddresses",
+      "source": "https://learn.microsoft.com/en-us/powershell/module/dnsclient/set-dnsclientserveraddress", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-025", "titre": "RAM : deux kits différents mélangés", "domaine": "jeu",
+      "classement": "stabilité", "risque": "vert", "admin": false, "methode": "manuel", "priorite": 25,
+      "profils": [], "parDefaut": false, "detection": "ram_mix",
+      "quoi": "Fiche d'information : en cas de plantages en jeu, tester la mémoire (Diagnostic de mémoire Windows : mdsched.exe) et, si besoin, l'XMP à une fréquence plus basse dans le BIOS. Rien à faire si le PC est stable.",
+      "commande": "mdsched.exe",
+      "annulation": "Aucune.",
+      "source": "", "sourceVerifiee": false
+    },
+    {
+      "id": "NG-026", "titre": "Pilote NVIDIA", "domaine": "jeu",
+      "classement": "stabilité", "risque": "vert", "admin": true, "methode": "manuel", "priorite": 26,
+      "profils": [], "parDefaut": false, "detection": "nvidia",
+      "quoi": "Comparé à la dernière version publiée sur nvidia.com (donnée à l'audit avec -NvidiaLatestVersion). Mise à jour via l'application NVIDIA ou nvidia.com ; netguard ne télécharge rien.",
+      "commande": "",
+      "annulation": "Gestionnaire de périphériques > Restaurer le pilote.",
+      "source": "https://www.nvidia.com/en-us/geforce/drivers/", "sourceVerifiee": false,
+      "noteSource": "Version de référence vérifiée le 2026-11-08 sur les pages d'annonce NVIDIA."
+    },
+
+    {
+      "id": "NG-090", "titre": "TCP : désactiver l'autotuning de la fenêtre de réception", "domaine": "reseau",
+      "classement": "placebo", "risque": "rouge", "admin": true, "methode": "aucune", "priorite": 90,
+      "profils": [], "parDefaut": false, "detection": "placebo", "abTest": true, "nonRecommande": true,
+      "quoi": "« Tweak » YouTube. Les jeux en ligne utilisent surtout UDP : la fenêtre TCP n'y joue aucun rôle. Désactivé, l'autotuning BRIDE les téléchargements rapides. Microsoft recommande le niveau « normal ». Testé en A/B seulement si tu le demandes.",
+      "commande": "netsh int tcp show global   # lecture seule",
+      "annulation": "netsh int tcp set global autotuninglevel=normal",
+      "source": "https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/tcpip-performance-known-issues", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-091", "titre": "TcpAckFrequency = 1", "domaine": "reseau",
+      "classement": "placebo", "risque": "orange", "admin": true, "methode": "aucune", "priorite": 91,
+      "profils": [], "parDefaut": false, "detection": "placebo", "abTest": true, "nonRecommande": true,
+      "quoi": "« Tweak » YouTube : supprime l'accusé de réception retardé de TCP. Sans effet sur l'UDP des jeux ; Microsoft déconseille de le modifier sans étude de l'environnement.",
+      "commande": "",
+      "annulation": "Supprimer la valeur TcpAckFrequency de l'interface.",
+      "source": "https://support.microsoft.com/kb/328890", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-092", "titre": "Désactiver Nagle (TCPNoDelay / TcpNoDelay)", "domaine": "reseau",
+      "classement": "placebo", "risque": "orange", "admin": true, "methode": "aucune", "priorite": 92,
+      "profils": [], "parDefaut": false, "detection": "placebo", "abTest": true, "nonRecommande": true,
+      "quoi": "L'algorithme de Nagle se règle par l'application elle-même (option de socket TCP_NODELAY), pas par le registre de Windows ; et les jeux temps réel sont en UDP.",
+      "commande": "",
+      "annulation": "Supprimer la valeur ajoutée.",
+      "source": "https://learn.microsoft.com/en-us/archive/blogs/nettracer/tcp-delayed-ack-combined-with-nagle-algorithm-can-badly-impact-communication-performance", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-093", "titre": "Forcer un MTU « gaming »", "domaine": "reseau",
+      "classement": "placebo", "risque": "orange", "admin": true, "methode": "aucune", "priorite": 93,
+      "profils": [], "parDefaut": false, "detection": "mtu", "nonRecommande": true,
+      "quoi": "Le MTU du chemin est mesuré par l'audit ; Windows l'adapte seul (découverte du MTU du chemin). Le forcer plus bas fragmente pour rien, plus haut provoque des pertes.",
+      "commande": "",
+      "annulation": "",
+      "source": "", "sourceVerifiee": false, "noteSource": "Constat mesuré sur ta machine, pas de réglage."
+    },
+    {
+      "id": "NG-094", "titre": "NetworkThrottlingIndex / SystemResponsiveness", "domaine": "reseau",
+      "classement": "placebo", "risque": "orange", "admin": true, "methode": "aucune", "priorite": 94,
+      "profils": [], "parDefaut": false, "detection": "placebo", "abTest": true, "nonRecommande": true,
+      "quoi": "Valeurs du service multimédia (MMCSS) popularisées par les « tweak packs ». Aucune documentation officielle récente reliant ces valeurs au ping en jeu : NON VÉRIFIÉ.",
+      "commande": "",
+      "annulation": "",
+      "source": "", "sourceVerifiee": false
+    },
+    {
+      "id": "NG-095", "titre": "Désactiver la modération des interruptions de la carte", "domaine": "reseau",
+      "classement": "placebo", "risque": "orange", "admin": true, "methode": "aucune", "priorite": 95,
+      "profils": [], "parDefaut": false, "detection": "placebo", "abTest": true, "nonRecommande": true,
+      "quoi": "Gain théorique de quelques microsecondes, au prix de beaucoup plus d'interruptions processeur. Invisible face aux 7 à 15 ms de la ligne.",
+      "commande": "",
+      "annulation": "",
+      "source": "", "sourceVerifiee": false
+    },
+    {
+      "id": "NG-096", "titre": "Désactiver VBS / l'intégrité de la mémoire (HVCI)", "domaine": "securite",
+      "classement": "placebo", "risque": "rouge", "admin": true, "methode": "aucune", "priorite": 96,
+      "profils": [], "parDefaut": false, "detection": "vbs", "nonRecommande": true, "interdit": true,
+      "quoi": "JAMAIS fait par netguard. L'effet de HVCI sur les images par seconde dépend du jeu et n'est pas mesuré ici ; en revanche, la liste de blocage des pilotes vulnérables est appliquée quand l'intégrité de la mémoire est active, et la couper ouvre la porte aux pilotes vulnérables connus. Constat et commande manuelle seulement.",
+      "commande": "",
+      "annulation": "",
+      "source": "https://learn.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/microsoft-recommended-driver-block-rules", "sourceVerifiee": true
+    },
+    {
+      "id": "NG-097", "titre": "Désactiver Defender, le pare-feu ou les mises à jour « pour le ping »", "domaine": "securite",
+      "classement": "placebo", "risque": "rouge", "admin": true, "methode": "aucune", "priorite": 97,
+      "profils": [], "parDefaut": false, "detection": "interdit", "nonRecommande": true, "interdit": true,
+      "quoi": "Interdit par le projet. Aucun de ces composants n'ajoute de latence réseau mesurable à une partie en cours ; les exclusions Defender non plus ne sont jamais proposées.",
+      "commande": "",
+      "annulation": "",
+      "source": "https://learn.microsoft.com/en-us/defender-endpoint/prevent-changes-to-security-settings-with-tamper-protection", "sourceVerifiee": true
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+﻿{
+  "_commentaire": "Résolveurs comparés par le benchmark DNS. Le résolveur 'actuel' (celui de la carte réseau, souvent la box) est ajouté automatiquement par l'audit. Adresses recopiées des pages officielles de chaque fournisseur.",
+  "providers": [
+    { "name": "Cloudflare", "ipv4": [ "1.1.1.1", "1.0.0.1" ], "ipv6": [ "2606:4700:4700::1111", "2606:4700:4700::1001" ], "source": "https://developers.cloudflare.com/1.1.1.1/ip-addresses/" },
+    { "name": "Google", "ipv4": [ "8.8.8.8", "8.8.4.4" ], "ipv6": [ "2001:4860:4860::8888", "2001:4860:4860::8844" ], "source": "https://developers.google.com/speed/public-dns/docs/using" },
+    { "name": "Quad9", "ipv4": [ "9.9.9.9", "149.112.112.112" ], "ipv6": [ "2620:fe::fe", "2620:fe::9" ], "source": "https://quad9.net/service/service-addresses-and-features/", "note": "Bloque les domaines malveillants connus (filtrage)." }
+  ],
+  "_domainesCommentaire": "Domaines variés (jeux, vidéo, sites français). Pour chaque domaine : 1 requête du nom réel (souvent déjà en cache chez le résolveur : mesure surtout la distance au résolveur) et, pour une partie, 1 requête d'un sous-domaine ALÉATOIRE inexistant (jamais en cache : force une vraie résolution récursive).",
+  "domains": [
+    "riotgames.com", "leagueoflegends.com", "steampowered.com", "epicgames.com", "discord.com", "twitch.tv",
+    "youtube.com", "google.com", "wikipedia.org", "github.com", "lemonde.fr", "leboncoin.fr"
+  ],
+  "randomSubdomainsPerServer": 6
+}

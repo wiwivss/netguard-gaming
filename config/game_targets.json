@@ -1,0 +1,12 @@
+﻿{
+  "_commentaire": "Cibles de latence. La passerelle (box) est ajoutée automatiquement. AU PLUS 20 requêtes par cible et par passe (règle du projet), une toutes les 200 ms : aucun flood. Ajoute tes vrais serveurs dans game_targets.local.json (ignoré par Git).",
+  "_honnetete": "Les serveurs de jeu filtrent presque tous le ping (ICMP) et changent d'adresse : Riot (Valorant, LoL) passe par son propre réseau Riot Direct, CS2 par les relais Steam Datagram Relay de Valve, Fortnite et Rocket League par des serveurs loués par Epic. Les cibles 'proxy' ci-dessous sont des points d'entrée de régions cloud situés dans les mêmes villes : elles mesurent ta ligne jusqu'à Paris / Francfort / Londres, PAS le serveur de jeu lui-même. La référence reste le ping affiché en jeu.",
+  "targets": [
+    { "name": "Cloudflare 1.1.1.1", "host": "1.1.1.1", "method": "icmp", "kind": "reference" },
+    { "name": "Google 8.8.8.8", "host": "8.8.8.8", "method": "icmp", "kind": "reference" },
+    { "name": "Paris (proxy : AWS eu-west-3)", "host": "dynamodb.eu-west-3.amazonaws.com", "method": "icmp", "kind": "proxy", "games": "Valorant / LoL (Riot, Paris), Fortnite / Rocket League (EU)", "source": "https://docs.aws.amazon.com/general/latest/gr/ddb.html" },
+    { "name": "Francfort (proxy : AWS eu-central-1)", "host": "dynamodb.eu-central-1.amazonaws.com", "method": "icmp", "kind": "proxy", "games": "Valorant / LoL (Francfort), CS2 relais FRA, Fortnite EU", "source": "https://docs.aws.amazon.com/general/latest/gr/ddb.html" },
+    { "name": "Londres (proxy : AWS eu-west-2)", "host": "dynamodb.eu-west-2.amazonaws.com", "method": "icmp", "kind": "proxy", "games": "Valorant (Londres), CS2 relais LHR", "source": "https://docs.aws.amazon.com/general/latest/gr/ddb.html" }
+  ],
+  "_exempleLocal": "Dans game_targets.local.json : { \"targets\": [ { \"name\": \"Mon serveur\", \"host\": \"1.2.3.4\", \"method\": \"tcp\", \"port\": 443, \"kind\": \"jeu\" } ] }  -- method 'tcp' = durée d'ouverture d'une connexion TCP (pour les hôtes qui filtrent le ping)."
+}
